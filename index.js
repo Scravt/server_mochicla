@@ -3,12 +3,21 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import path from "path";
 import { fileURLToPath } from "url";
+import cors from "cors";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function startServer() {
   const app = express();
+  app.use(cors(
+    {
+      origin: "https://la-mochila-de-derechos.vercel.app/",
+      credentials: true,
+      allowedHeaders: ["Authorization"],
+      methods: ["GET", "POST", "PUT", "DELETE"],
+    }
+  ));
   const httpServer = createServer(app);
   const io = new Server(httpServer, {
     cors: {
@@ -19,7 +28,7 @@ async function startServer() {
     },
   });
 
-  const PORT = 3000;
+  const PORT = 8080;
 
   // Games state
   const rooms = new Map();
