@@ -12,13 +12,13 @@ async function startServer() {
   const app = express();
   app.use(cors(
     {
-      origin: "https://la-mochila-de-derechos.vercel.app/",
+      origin: "https://localhost:3000",
     }
   ));
   const httpServer = createServer(app);
   const io = new Server(httpServer, {
     cors: {
-      origin: "https://la-mochila-de-derechos.vercel.app/",
+      origin: "https://localhost:3000",
     },
   });
 
