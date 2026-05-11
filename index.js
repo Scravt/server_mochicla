@@ -12,7 +12,10 @@ async function startServer() {
   const httpServer = createServer(app);
   const io = new Server(httpServer, {
     cors: {
-      origin: "*",
+      origin: "https://la-mochila-de-derechos.vercel.app/",
+      credentials: true,
+      allowedHeaders: ["Authorization"],
+      methods: ["GET", "POST", "PUT", "DELETE"],
     },
   });
 
@@ -89,7 +92,7 @@ async function startServer() {
         if (isFirstQuestion) {
           room.status = RoomStatus.QUESTION_PREVIEW;
           room.questionStartTime = 0;
-          
+
           io.to(roomCode).emit("new-question", {
             question: room.questions[room.currentQuestionIndex],
             index: room.currentQuestionIndex,
@@ -100,7 +103,7 @@ async function startServer() {
         } else {
           room.status = RoomStatus.PLAYING;
           room.questionStartTime = Date.now();
-          
+
           room.timer = setTimeout(() => {
             if (rooms.has(roomCode) && rooms.get(roomCode).status === RoomStatus.PLAYING) {
               triggerShowResults(roomCode);
@@ -127,7 +130,7 @@ async function startServer() {
       if (room && room.hostId === socket.id && room.status === RoomStatus.QUESTION_PREVIEW) {
         room.status = RoomStatus.PLAYING;
         room.questionStartTime = Date.now();
-        
+
         if (room.timer) clearTimeout(room.timer);
         room.timer = setTimeout(() => {
           if (rooms.has(roomCode) && rooms.get(roomCode).status === RoomStatus.PLAYING) {
@@ -153,12 +156,12 @@ async function startServer() {
 
       room.status = RoomStatus.QUESTION_RESULTS;
       const question = room.questions[room.currentQuestionIndex];
-      
+
       const stats = {
         correctAnswer: question.correctAnswer,
         distribution: [0, 0, 0, 0],
       };
-      
+
       room.submissions.forEach((sub) => {
         if (sub.answerIndex >= 0 && sub.answerIndex < 4) {
           stats.distribution[sub.answerIndex]++;
@@ -217,7 +220,7 @@ async function startServer() {
       }
 
       room.submissions.set(socket.id, { isCorrect, score, timeTaken, answerIndex });
-      
+
       // Check if all (non-host) players have submitted
       const nonHostPlayers = room.players.filter(p => !p.isHost);
       if (room.submissions.size === nonHostPlayers.length && nonHostPlayers.length > 0) {
