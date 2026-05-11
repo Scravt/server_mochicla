@@ -1,0 +1,19 @@
+{
+  "name": "server_mochicla",
+  "version": "1.0.0",
+  "description": "servidor socket io",
+  "main": "index.js",
+  "scripts": {
+    "test": "test",
+    "dev": "node index.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
+    "vite": "^6.2.3"
+  },
+  "author": "",
+  "license": "ISC"
+}
