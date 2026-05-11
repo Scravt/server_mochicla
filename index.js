@@ -13,18 +13,12 @@ async function startServer() {
   app.use(cors(
     {
       origin: "https://la-mochila-de-derechos.vercel.app/",
-      credentials: true,
-      allowedHeaders: ["Authorization"],
-      methods: ["GET", "POST", "PUT", "DELETE"],
     }
   ));
   const httpServer = createServer(app);
   const io = new Server(httpServer, {
     cors: {
       origin: "https://la-mochila-de-derechos.vercel.app/",
-      credentials: true,
-      allowedHeaders: ["Authorization"],
-      methods: ["GET", "POST", "PUT", "DELETE"],
     },
   });
 
