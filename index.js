@@ -8,21 +8,37 @@ import cors from "cors";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Agregado para evitar errores de "RoomStatus is not defined"
+const RoomStatus = {
+  LOBBY: "LOBBY",
+  QUESTION_PREVIEW: "QUESTION_PREVIEW",
+  PLAYING: "PLAYING",
+  QUESTION_RESULTS: "QUESTION_RESULTS",
+  FINISHED: "FINISHED"
+};
+
 async function startServer() {
   const app = express();
-  app.use(cors(
-    {
-      origin: "*",
-    }
-  ));
+
+  // CORS explícito para Express
+  app.use(cors({
+    origin: "*",
+    methods: ["GET", "POST", "OPTIONS"]
+  }));
+
   const httpServer = createServer(app);
+
+  // CORS y métodos explícitos para Socket.IO
   const io = new Server(httpServer, {
     cors: {
       origin: "*",
+      methods: ["GET", "POST"],
+      credentials: false
     },
   });
 
-  const PORT = 8080;
+  // El puerto dinámico inyectado por Render o 8080 en local
+  const PORT = process.env.PORT || 8080;
 
   // Games state
   const rooms = new Map();
