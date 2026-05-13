@@ -1,15 +1,12 @@
 import { RoomStatus, GameConfig, SocketEvents } from "./constants.js";
-import { getNonHostPlayers, sortPlayersByScore, cleanupRoom } from "./roomManager.js";
+import { getNonHostPlayers, sortPlayersByStats, cleanupRoom } from "./roomManager.js";
 
 /**
- * Calcula la puntuación del jugador basándose en velocidad y corrección
+ * Calcula la puntuación del jugador basándose en corrección
+ * Retorna 1 si es correcto, 0 si es incorrecto
  */
 export function calculateScore(isCorrect, timeTaken, maxTime) {
-  if (!isCorrect) return 0;
-  
-  // Puntuación base + bonus por rapidez
-  const speedBonus = Math.max(0, maxTime - timeTaken);
-  return Math.floor(GameConfig.BASE_SCORE + (speedBonus / maxTime) * GameConfig.SPEED_BONUS_MULTIPLIER);
+  return isCorrect ? 1 : 0;
 }
 
 /**
@@ -29,10 +26,16 @@ export function processPlayerAnswer(room, playerId, answerIndex) {
   
   const score = calculateScore(isCorrect, timeTaken, room.questionDuration);
   
+  // Actualizar respuestas correctas
   if (isCorrect) {
-    player.score += score;
     player.totalCorrect += 1;
   }
+  
+  // Siempre acumular el tiempo tomado
+  player.totalTime += timeTaken;
+  
+  // Actualizar score (para compatibilidad)
+  player.score += score;
   
   room.submissions.set(playerId, { isCorrect, score, timeTaken, answerIndex });
   
@@ -86,7 +89,7 @@ export function allPlayersSubmitted(room) {
  * Genera datos finales del juego
  */
 export function prepareGameResults(room) {
-  return sortPlayersByScore(room.players);
+  return sortPlayersByStats(room.players);
 }
 
 /**

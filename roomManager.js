@@ -23,6 +23,7 @@ export function createRoom(questions, hostId, hostName) {
         name: hostName || GameConfig.DEFAULT_HOST_NAME,
         score: 0,
         totalCorrect: 0,
+        totalTime: 0,
         isHost: true,
       }
     ],
@@ -46,6 +47,7 @@ export function addPlayerToRoom(room, playerId, playerName) {
     name: playerName,
     score: 0,
     totalCorrect: 0,
+    totalTime: 0,
     isHost: false,
   };
   
@@ -75,6 +77,21 @@ export function getNonHostPlayers(room) {
  */
 export function sortPlayersByScore(players) {
   return [...players].sort((a, b) => b.score - a.score);
+}
+
+/**
+ * Ordena jugadores por estadísticas de juego
+ * Criterios: 1) Mayor cantidad de respuestas correctas, 2) Menor tiempo acumulado
+ */
+export function sortPlayersByStats(players) {
+  return [...players].sort((a, b) => {
+    // Primero: mayor cantidad de respuestas correctas
+    if (a.totalCorrect !== b.totalCorrect) {
+      return b.totalCorrect - a.totalCorrect;
+    }
+    // Si son iguales: menor tiempo acumulado
+    return a.totalTime - b.totalTime;
+  });
 }
 
 /**
