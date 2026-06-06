@@ -1,4 +1,5 @@
 import { RoomStatus, GameConfig } from "./constants.js";
+import crypto from "crypto";
 
 /**
  * Genera un código de sala único
@@ -13,17 +14,21 @@ export function generateRoomCode() {
 export function createRoom(questions, hostId, hostName) {
   const roomCode = generateRoomCode();
   
+  const hostPlayerId = crypto.randomUUID();
+  
   const roomData = {
     code: roomCode,
-    hostId,
+    hostId: hostPlayerId,
     status: RoomStatus.LOBBY,
     players: [
       {
-        id: hostId,
+        id: hostPlayerId,
+        socketId: hostId,
         name: hostName || GameConfig.DEFAULT_HOST_NAME,
         score: 0,
         totalCorrect: 0,
         isHost: true,
+        isConnected: true,
       }
     ],
     questions,
@@ -40,13 +45,16 @@ export function createRoom(questions, hostId, hostName) {
 /**
  * Añade un jugador a una sala
  */
-export function addPlayerToRoom(room, playerId, playerName) {
+export function addPlayerToRoom(room, socketId, playerName) {
+  const playerId = crypto.randomUUID();
   const newPlayer = {
     id: playerId,
+    socketId: socketId,
     name: playerName,
     score: 0,
     totalCorrect: 0,
     isHost: false,
+    isConnected: true,
   };
   
   room.players.push(newPlayer);

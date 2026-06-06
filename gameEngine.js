@@ -15,12 +15,12 @@ export function calculateScore(isCorrect, timeTaken, maxTime) {
 /**
  * Procesa la respuesta enviada por un jugador
  */
-export function processPlayerAnswer(room, playerId, answerIndex) {
-  const player = room.players.find((p) => p.id === playerId);
+export function processPlayerAnswer(room, socketId, answerIndex) {
+  const player = room.players.find((p) => p.socketId === socketId);
   if (!player || player.isHost) return null;
   
   // Evitar respuestas duplicadas
-  if (room.submissions.has(playerId)) return null;
+  if (room.submissions.has(player.id)) return null;
   
   const now = Date.now();
   const timeTaken = now - room.questionStartTime;
@@ -34,7 +34,7 @@ export function processPlayerAnswer(room, playerId, answerIndex) {
     player.totalCorrect += 1;
   }
   
-  room.submissions.set(playerId, { isCorrect, score, timeTaken, answerIndex });
+  room.submissions.set(player.id, { isCorrect, score, timeTaken, answerIndex });
   
   return { isCorrect, score, timeTaken, answerIndex };
 }
@@ -79,7 +79,15 @@ export function prepareNextQuestionPayload(room, questionIndex) {
  */
 export function allPlayersSubmitted(room) {
   const nonHostPlayers = getNonHostPlayers(room);
-  return room.submissions.size === nonHostPlayers.length && nonHostPlayers.length > 0;
+  const connectedPlayers = nonHostPlayers.filter(p => p.isConnected);
+  
+  // Contamos cuantas de las submissions son de jugadores conectados
+  let connectedSubmissions = 0;
+  connectedPlayers.forEach(p => {
+    if (room.submissions.has(p.id)) connectedSubmissions++;
+  });
+  
+  return connectedSubmissions === connectedPlayers.length && connectedPlayers.length > 0;
 }
 
 /**

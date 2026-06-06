@@ -35,34 +35,16 @@ export function setupSocketIO(httpServer) {
 /**
  * Configura rutas API del servidor
  */
-export function setupApiRoutes(app, isProduction, distPath) {
+export function setupApiRoutes(app) {
   app.get("/api/health", (req, res) => {
     res.json({ 
       status: "ok", 
-      mode: isProduction ? "production" : "development" 
+      mode: process.env.NODE_ENV === "production" ? "production" : "development" 
     });
   });
 }
 
-/**
- * Configura middleware para archivos estáticos (producción) o Vite (desarrollo)
- */
-export async function setupStaticFiles(app, isProduction, distPath) {
-  if (!isProduction) {
-    const { createServer: createViteServer } = await import("vite");
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    const path = await import("path");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
-  }
-}
+
 
 /**
  * Inicia el servidor en el puerto especificado

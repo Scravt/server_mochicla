@@ -56,7 +56,8 @@ export function setupSocketHandlers(io, rooms) {
     socket.on(SocketEvents.START_GAME, (roomCode) => {
       const room = rooms.get(roomCode);
       
-      if (!room || room.hostId !== socket.id) return;
+      const hostPlayer = room?.players.find(p => p.socketId === socket.id && p.isHost);
+      if (!room || !hostPlayer) return;
       
       room.currentQuestionIndex = -1;
       triggerNextQuestion(io, rooms, roomCode);
@@ -66,7 +67,8 @@ export function setupSocketHandlers(io, rooms) {
     socket.on(SocketEvents.START_TIMER, (roomCode) => {
       const room = rooms.get(roomCode);
       
-      if (room && room.hostId === socket.id && room.status === RoomStatus.QUESTION_PREVIEW) {
+      const hostPlayer = room?.players.find(p => p.socketId === socket.id && p.isHost);
+      if (room && hostPlayer && room.status === RoomStatus.QUESTION_PREVIEW) {
         startPlayingTimer(io, rooms, room);
       }
     });
@@ -97,8 +99,40 @@ export function setupSocketHandlers(io, rooms) {
     socket.on(SocketEvents.NEXT_QUESTION, (roomCode) => {
       const room = rooms.get(roomCode);
       
-      if (room && room.hostId === socket.id) {
+      const hostPlayer = room?.players.find(p => p.socketId === socket.id && p.isHost);
+      if (room && hostPlayer) {
         triggerNextQuestion(io, rooms, roomCode);
+      }
+    });
+
+    // ========== RECONECTAR ==========
+    socket.on("reconnect-player", ({ roomCode, playerId }) => {
+      const room = rooms.get(roomCode?.toUpperCase());
+      if (!room) {
+        return socket.emit("reconnect-error", "Sala no encontrada");
+      }
+      
+      const player = room.players.find(p => p.id === playerId);
+      if (!player) {
+        return socket.emit("reconnect-error", "Jugador no encontrado en esta sala");
+      }
+      
+      // Actualizar socket ID y estado de conexión
+      player.socketId = socket.id;
+      player.isConnected = true;
+      socket.join(room.code);
+      
+      // Emitir éxito y el estado actual de la sala a este usuario
+      socket.emit("reconnect-success", { room, player });
+      
+      // Notificar a los demás que alguien se reconectó (opcional, pero útil)
+      io.to(room.code).emit(SocketEvents.PLAYER_JOINED, room.players);
+      console.log(`Player ${player.name} reconnected to room ${room.code}`);
+      
+      // Si la sala está esperando resultados o siguiente pregunta y este era el último que faltaba, 
+      // verificamos si podemos avanzar (por si un disconnect previo había trabado algo, aunque lo manejamos en disconnect).
+      if (room.status === RoomStatus.PLAYING && allPlayersSubmitted(room)) {
+        triggerShowResults(io, rooms, room.code);
       }
     });
 
@@ -107,19 +141,38 @@ export function setupSocketHandlers(io, rooms) {
       console.log("User disconnected:", socket.id);
       
       rooms.forEach((room, code) => {
-        if (room.hostId === socket.id) {
-          // El host se desconectó, eliminar sala
-          cleanupRoom(room);
-          io.to(code).emit(SocketEvents.ERROR, "El host ha abandonado la sala");
-          rooms.delete(code);
-          console.log(`Room ${code} deleted - host disconnected`);
-        } else {
-          // Jugador se desconectó, eliminarlo de la sala
-          const index = room.players.findIndex(p => p.id === socket.id);
-          if (index !== -1) {
-            removePlayerFromRoom(room, socket.id);
-            io.to(code).emit(SocketEvents.PLAYER_JOINED, room.players);
+        const playerIndex = room.players.findIndex(p => p.socketId === socket.id);
+        if (playerIndex !== -1) {
+          const player = room.players[playerIndex];
+          player.isConnected = false;
+          
+          if (player.isHost) {
+            // El host se desconectó: por ahora no borramos la sala, esperamos que vuelva.
+            // Opcionalmente se podría poner un timeout.
+            console.log(`Host ${player.name} disconnected from room ${code}`);
+          } else {
+            console.log(`Player ${player.name} disconnected from room ${code}`);
+            
+            // Si el juego está en curso y no ha respondido, enviamos una respuesta errónea por él
+            if (room.status === RoomStatus.PLAYING && !room.submissions.has(player.id)) {
+              console.log(`Auto-submitting wrong answer for disconnected player ${player.name}`);
+              room.submissions.set(player.id, { isCorrect: false, score: 0, timeTaken: room.questionDuration, answerIndex: -1 });
+              
+              // Notificar progreso al host
+              const nonHostPlayers = getNonHostPlayers(room);
+              io.to(room.players.find(p => p.isHost)?.socketId).emit(SocketEvents.SUBMISSION_UPDATE, {
+                count: room.submissions.size,
+                total: nonHostPlayers.length,
+              });
+
+              // Si todos los demás ya respondieron, avanzamos
+              if (allPlayersSubmitted(room)) {
+                triggerShowResults(io, rooms, code);
+              }
+            }
           }
+          
+          io.to(code).emit(SocketEvents.PLAYER_JOINED, room.players);
         }
       });
     });
