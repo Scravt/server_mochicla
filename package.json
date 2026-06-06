@@ -4,7 +4,8 @@
   "description": "servidor socket io",
   "main": "index.js",
   "scripts": {
-    "test": "test",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "start": "node index.js",
     "dev": "node --watch index.js"
   },
@@ -15,5 +16,8 @@
     "socket.io-client": "^4.8.3"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "vitest": "^4.1.8"
+  }
 }
